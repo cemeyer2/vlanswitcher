@@ -8,7 +8,10 @@ Created on May 4, 2010
 
 import optparse, subprocess, re, sys
 
-def refresh_arp_cache(ip_addr):
+def __refresh_arp_cache(ip_addr):
+    """
+    refreshes the local system arp cache for a given ip address by pinging it
+    """
     print "refreshing local arp cache via ping to " + str(ip_addr)
     command = ["ping","-c","1",ip_addr]
     proc = subprocess.Popen(command,stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -19,6 +22,10 @@ def refresh_arp_cache(ip_addr):
             break    
 
 def ip_to_mac(ip_addr):
+    """
+    parses the arp cache of the local system to find a corresponding MAC address for a given IP address
+    """
+    __refresh_arp_cache(ip_addr)
     #http://xiix.wordpress.com/2008/06/26/python-regex-for-mac-addresses/
     mac_regex = "([a-fA-F0-9]{2}[:|\-]?){6}"
     retval = None
@@ -38,6 +45,9 @@ def ip_to_mac(ip_addr):
     return retval
 
 def mac_to_vm(mac_addr):
+    """
+    parses the virtualbox vm listings to find the name of the virtual machine with the MAC address specified
+    """
     pattern = "^(Name:)(\s+)(\S+)$"
     regex = re.compile(pattern)
     retval = None
@@ -65,22 +75,25 @@ def switch_vm_vlan(vm_name, target_vlan):
                 break
 
 if __name__ == '__main__':
+    #option parsing setup
     parser = optparse.OptionParser()
     parser.add_option('--ip', dest='ip_addr', metavar='IP', help='IP address of VM to switch')
     parser.add_option('--target-vlan', dest='target_vlan', metavar='VLAN', help='VLAN to switch VM to')
     (options, args) = parser.parse_args()
     
+    #option parsing error checking
     if not options.ip_addr:
-        parser.error("IP address of VM to switch not specified")
-        
+        parser.error("IP address of VM to switch not specified")    
     if not options.target_vlan:
         parser.error("Target VLAN not specified")
     
-    refresh_arp_cache(options.ip_addr)
+    #meat of the script
     mac_addr = ip_to_mac(options.ip_addr)
     if mac_addr is None:
         print "Failed to find MAC address for IP "+str(options.ip_addr)
         sys.exit(1)
+    #the local arp cache gives us MAC addresses in lower case separated by colons, while the vbox
+    #listing is in upper case with no separations, so conversion is necessary
     mac_addr = mac_addr.replace(":","").upper()
     print "Found MAC address for "+str(options.ip_addr)+" to be "+str(mac_addr)
     vm_name = mac_to_vm(mac_addr)
