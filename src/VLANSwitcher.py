@@ -13,7 +13,7 @@ def __refresh_arp_cache(ip_addr):
     refreshes the local system arp cache for a given ip address by pinging it
     """
     print "refreshing local arp cache via ping to " + str(ip_addr)
-    command = ["ping","-c","1",ip_addr]
+    command = ["/bin/ping","-c","1",ip_addr]
     proc = subprocess.Popen(command,stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     while True:
         line = proc.stdout.readline().strip()
@@ -30,7 +30,7 @@ def ip_to_mac(ip_addr):
     pattern = "([a-fA-F0-9]{2}[:|\-]?){6}"
     regex = re.compile(pattern)
     retval = None
-    command = "ip"
+    command = "/sbin/ip"
     arg = "neighbor"
     proc = subprocess.Popen([command, arg],stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     while True:
@@ -53,7 +53,7 @@ def mac_to_vm(mac_addr):
     regex = re.compile(pattern)
     retval = None
     recent_vm_name = ""
-    command = ["VBoxManage", "list","-l","vms"]
+    command = ["/usr/bin/VBoxManage", "list","-l","vms"]
     proc = subprocess.Popen(command,stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     while True:
         line = proc.stdout.readline().strip()
@@ -68,7 +68,7 @@ def mac_to_vm(mac_addr):
 
 def switch_vm_vlan(vm_name, target_vlan):
     for nic_number in range(1,9): #can have nics numbered 1-8, so be sure to change all of them
-        command = ["VBoxManage","controlvm", vm_name, "nic"+str(nic_number), "bridged", "eth0."+str(target_vlan)]
+        command = ["/usr/bin/VBoxManage","controlvm", vm_name, "nic"+str(nic_number), "bridged", "eth0."+str(target_vlan)]
         proc = subprocess.Popen(command,stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         while True:
             line = proc.stdout.readline().strip()
