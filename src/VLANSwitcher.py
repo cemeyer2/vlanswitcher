@@ -27,7 +27,8 @@ def ip_to_mac(ip_addr):
     """
     __refresh_arp_cache(ip_addr)
     #http://xiix.wordpress.com/2008/06/26/python-regex-for-mac-addresses/
-    mac_regex = "([a-fA-F0-9]{2}[:|\-]?){6}"
+    pattern = "([a-fA-F0-9]{2}[:|\-]?){6}"
+    regex = re.compile(pattern)
     retval = None
     command = "ip"
     arg = "neighbor"
@@ -35,7 +36,7 @@ def ip_to_mac(ip_addr):
     while True:
         line = proc.stdout.readline().strip()
         if line.find(ip_addr) >= 0: #we found an arp cache entry for the ip we were looking for
-            c = re.compile(mac_regex).finditer(line)
+            c = regex.finditer(line)
             if c:
                 for y in c:
                     retval = line[y.start(): y.end()]
