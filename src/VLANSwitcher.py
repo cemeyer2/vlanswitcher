@@ -6,7 +6,7 @@ Created on May 4, 2010
 @author: Charlie Meyer
 '''
 
-import optparse, subprocess, re
+import optparse, subprocess, re, sys
 
 def refresh_arp_cache(ip_addr):
     print "refreshing local arp cache via ping to " + str(ip_addr)
@@ -38,17 +38,31 @@ def ip_to_mac(ip_addr):
     return retval
 
 def mac_to_vm(mac_addr):
+    pattern = "^(Name:)(\s+)(\S+)$"
+    regex = re.compile(pattern)
     retval = None
+    recent_vm_name = ""
     command = ["VBoxManage", "list","-l","vms"]
     proc = subprocess.Popen(command,stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     while True:
         line = proc.stdout.readline().strip()
-        print line
+        match = regex.match(line)
+        if match:
+            recent_vm_name = match.group(3)
+        if line.find(mac_addr) >= 0:
+            retval = recent_vm_name
         if line == '' and proc.poll() != None:
             break
+    return retval
 
 def switch_vm_vlan(vm_name, target_vlan):
-    pass
+    for nic_number in range(1,9): #can have nics numbered 1-8, so be sure to change all of them
+        command = ["VBoxManage","controlvm", vm_name, "nic"+str(nic_number), "bridged", "eth0."+str(target_vlan)]
+        proc = subprocess.Popen(command,stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        while True:
+            line = proc.stdout.readline().strip()
+            if line == '' and proc.poll() != None:
+                break
 
 if __name__ == '__main__':
     parser = optparse.OptionParser()
@@ -64,8 +78,18 @@ if __name__ == '__main__':
     
     refresh_arp_cache(options.ip_addr)
     mac_addr = ip_to_mac(options.ip_addr)
+    if mac_addr is None:
+        print "Failed to find MAC address for IP "+str(options.ip_addr)
+        sys.exit(1)
     mac_addr = mac_addr.replace(":","").upper()
     print "Found MAC address for "+str(options.ip_addr)+" to be "+str(mac_addr)
     vm_name = mac_to_vm(mac_addr)
+    if vm_name is None:
+        print "Failed to find VM for MAC address "+str(mac_addr)
+        sys.exit(1)
+    print "Found VM to be "+str(vm_name)
+    switch_vm_vlan(vm_name, options.target_vlan)
+    print "All interfaces on VM "+str(vm_name)+" switched to VLAN "+str(options.target_vlan)
+    sys.exit(0)
         
     
